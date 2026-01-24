@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+<title>AutoCAD-like Diagram Editor (HTML + JS only)</title>
+<style>
+  :root{
+    --ui-bg:#222;
+    --paper-bg:#fff;
+    --fg:#000;
+    --accent:#f5b400;
+  }
+  /* Layout: desktop (sidebar left) by default */
+  body { margin:0; font-family:system-ui,Segoe UI,Roboto,Arial; background:#111; color:#eee; height:100vh; display:flex; flex-direction:row; }
+  #sidebar { width:320px; padding:12px; box-sizing:border-box; background:linear-gradient(#1b1b1b,#131313); border-right:1px solid #111; overflow:auto; }
+  #canvasWrap { flex:1; position:relative; overflow:hidden; background:var(--paper-bg); min-height:0; }
+  .toolbar { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+  button, label { background:#2b2b2b; color:#fff; border:0; padding:8px 10px; border-radius:6px; cursor:pointer; }
+  button.toggle.active { outline:2px solid #3aa; }
+  .small { padding:6px 8px; font-size:13px; }
+  .muted{ opacity:0.8; font-size:13px; color:#ccc; margin-top:8px; }
+  .status { margin-top:10px; font-size:13px; color:#cfcfcf; }
+  .hint { font-size:12px; color:#9aa; margin-top:6px; }
+  .ctxmenu { position:absolute; z-index:60; background:#222; border:1px solid #3a3a3a; color:#fff; padding:6px; border-radius:6px; display:none; }
+  .ctxmenu button { display:block; margin:2px 0; width:100%; text-align:left; }
+  .alignPreview { position:absolute; z-index:40; pointer-events:none; }
+  .warning { color:#f88; margin-top:8px; font-size:13px; }
+  #hints { position:absolute; right:12px; bottom:12px; z-index:80; color:#666; background:rgba(255,255,255,0.9); border-radius:6px; padding:8px; font-size:12px; }
+  .controls-row{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px; }
+  svg { width:100%; height:100%; display:block; touch-action:none; }
+  .dottedLine { stroke-dasharray:6 6; stroke-width:2; fill:none; stroke:#3aa; }
+  .selOverlay { fill: #f5b400; fill-opacity:0.2; stroke:none; pointer-events:none; }
+  .port { fill:#fff; stroke:#000; stroke-width:1px; cursor:pointer; }
+  .branchNode { fill:#e33; stroke:#500; stroke-width:1.2px; cursor:pointer; }
+  .conn { fill:none; stroke-width:2px; stroke:#000; pointer-events:stroke; cursor:pointer; }
+  .conn.orth { stroke-linejoin:round; stroke-linecap:round; }
+  .containerRect { fill: rgba(0,0,0,0.02); stroke:#666; stroke-width:1.2px; rx:8; }
+  .blkText { font-size:12px; fill: var(--fg); pointer-events:none; user-select:none; }
+  .small-note{ font-size:12px; color:#bbb; }
+
+  /* RESPONSIVE: for narrow screens, move sidebar to top as a horizontal toolbar */
+  @media (max-width: 860px){
+    body { flex-direction:column; }
+    #sidebar { position:fixed; top:0; left:0; right:0; height:120px; width:100%; z-index:90; display:flex; align-items:flex-start; gap:8px; overflow:auto; padding:10px; box-shadow:0 2px 6px rgba(0,0,0,0.6); border-right:none; border-bottom:1px solid rgba(0,0,0,0.4); }
+    #canvasWrap { margin-top:120px; min-height: calc(100vh - 120px); }
+    .toolbar { gap:8px; }
+    button { padding:10px 12px; font-size:15px; }
+    .controls-row{ gap:8px; }
+    #hints { display:none; }
+  }
+
+  /* Extra small phones: compact sidebar height */
+  @media (max-width: 420px){
+    #sidebar { height:160px; }
+    #canvasWrap { margin-top:160px; }
+    button { padding:12px 14px; font-size:16px; }
+  }
+</style>
+</head>
+<body>
+  <div id="sidebar" role="region" aria-label="Controls">
+    <h3>AutoCAD-like Diagram Editor</h3>
+    <div class="toolbar">
+      <button id="addBlock" class="small">Add Block</button>
+      <button id="addMultiPortBlock" class="small">Add Multiport Block</button>
+      <button id="addContainer" class="small">Add Container</button>
+      <button id="addBranch" class="small">Add Branch</button>
+      <button id="connectMode" class="small">Connect Mode</button>
+    </div>
+
+    <div class="controls-row">
+      <button id="toggleOrth" class="small toggle">Orthogonal</button>
+      <button id="preferFewBends" class="small toggle">Fewer Bends</button>
+      <button id="toggleSnap" class="small toggle">Snap</button>
+      <button id="toggleBackground" class="small">BG: White</button>
+    </div>
+
+    <div class="controls-row">
+      <button id="alignCenterAction" class="small">Align Center</button>
+      <button id="snapToGridAction" class="small">Snap Now</button>
+      <button id="exportJSON" class="small">Export JSON</button>
+      <button id="importJSON" class="small">Import JSON</button>
+    </div>
+
+    <div class="muted">
+      - Vertical flow (Upstream → Downstream).<br/>
+      - Double-click or long-press to select a block (shows full context menu).<br/>
+      - Max blocks/containers: 20 (enforced).<br/>
+      - Works on desktop & mobile (mouse & touch).
+    </div>
+
+    <div class="status" id="status">Blocks: 0 | Containers: 0 | Connectors: 0</div>
+    <div class="warning" id="limitWarning" style="display:none;">Limit reached: maximum 20 blocks/containers</div>
+
+    <div style="margin-top:12px;">
+      <label class="small-note">Usage hints:</label>
+      <div class="hint">
+        Drag blocks to move. In Connect Mode, tap source port, then target port. For branches, use Add Branch then connect. Align center shows dotted line preview: accept or cancel in the UI.
+      </div>
+    </div>
+  </div>
+
+  <div id="canvasWrap">
+    <!-- inline context menu -->
+    <div id="ctxMenu" class="ctxmenu"></div>
+
+    <!-- alignment preview SVG layer (dotted lines) -->
+    <svg id="svgCanvas" xmlns="http://www.w3.org/2000/svg" tabindex="0">
+      <defs>
+        <marker id="arrow" viewBox="0 0 10 10" markerWidth="7" markerHeight="7" refX="6" refY="5" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#666" />
+        </marker>
+      </defs>
+      <g id="grid"></g>
+      <g id="containers"></g>
+      <g id="connectors"></g>
+      <g id="branches"></g>
+      <g id="blocks"></g>
+      <g id="alignPreview"></g>
+    </svg>
+
+    <div id="hints">Double-click / Long press to open context menu</div>
+  </div>
+
+<script>
+(() => {
+  const GRID_SIZE = 24;                    
+  const PADDING = 12;                      
+  const MAX_ELEMENTS = 20;                 
+  const PAPER_LIGHT = true;                
+  const SELECT_OVERLAY_OPACITY = 0.8;      
+
+  const svg = document.getElementById('svgCanvas');
+  const gridGroup = document.getElementById('grid');
+  const blocksGroup = document.getElementById('blocks');
+  const connectorsGroup = document.getElementById('connectors');
+  const containersGroup = document.getElementById('containers');
+  const branchesGroup = document.getElementById('branches');
+  const alignPreviewGroup = document.getElementById('alignPreview');
+  const ctxMenu = document.getElementById('ctxMenu');
+  const statusEl = document.getElementById('status');
+  const limitWarning = document.getElementById('limitWarning');
+  const toggleOrthBtn = document.getElementById('toggleOrth');
+  const toggleSnapBtn = document.getElementById('toggleSnap');
+  const preferFewBendsBtn = document.getElementById('preferFewBends');
+  const toggleBgBtn = document.getElementById('toggleBackground');
+
+  let blocks = [];        
+  let containers = [];    
+  let connectors = [];    
+  let branches = [];      
+  let selected = null;    
+  let connectMode = false;
+  let pendingConn = null; 
+  let orthogonal = true;
+  let preferFewBends = true;
+  let snap = true;
+  let bgLight = PAPER_LIGHT;
+  let elementCount = 0;   
+  let idSeq = 1;
+
+  const uid = (pref='id') => `${pref}_${idSeq++}`;
+  const clamp = (v,min,max) => Math.max(min, Math.min(max, v));
+  const snapToGrid = (v) => Math.round(v / GRID_SIZE) * GRID_SIZE;
+
+  document.getElementById('addBlock').addEventListener('click', () => createBlock());
+  document.getElementById('addMultiPortBlock').addEventListener('click', () => createMultiPortBlock());
+  document.getElementById('addContainer').addEventListener('click', () => createContainer());
+  document.getElementById('addBranch').addEventListener('click', () => enableAddBranch());
+  document.getElementById('connectMode').addEventListener('click', () => toggleConnectMode());
+  toggleOrthBtn.addEventListener('click', () => { orthogonal = !orthogonal; toggleButtonActive(toggleOrthBtn, orthogonal); redrawAll(); });
+  preferFewBendsBtn.addEventListener('click', () => { preferFewBends = !preferFewBends; toggleButtonActive(preferFewBendsBtn, preferFewBends); redrawAll(); });
+  toggleSnapBtn.addEventListener('click', () => { snap = !snap; toggleButtonActive(toggleSnapBtn, snap); });
+  toggleBgBtn.addEventListener('click', toggleBackground);
+  document.getElementById('alignCenterAction').addEventListener('click', startAlignCenterAction);
+  document.getElementById('snapToGridAction').addEventListener('click', snapAllToGrid);
+  document.getElementById('exportJSON').addEventListener('click', exportJSON);
+  document.getElementById('importJSON').addEventListener('click', importJSON);
+
+  function toggleButtonActive(btn, active){ if(active) btn.classList.add('active'); else btn.classList.remove('active'); }
+  toggleButtonActive(toggleOrthBtn, orthogonal);
+  toggleButtonActive(toggleSnapBtn, snap);
+  toggleButtonActive(preferFewBendsBtn, preferFewBends);
+  svg.style.background = bgLight ? '#fff' : '#0b0b0b';
+  setColorsForBackground();
+
+  function drawGrid(){
+    const w = svg.clientWidth, h = svg.clientHeight;
+    gridGroup.innerHTML = '';
+    const stroke = bgLight ? '#f0f0f0' : '#111111';
+    // reduce grid density on very small screens for clarity
+    const step = GRID_SIZE * (window.innerWidth < 420 ? 1.5 : 1);
+    for(let x=0; x<w; x+=step){
+      const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+      line.setAttribute('x1',x+''); line.setAttribute('y1','0');
+      line.setAttribute('x2',x+''); line.setAttribute('y2',h+'');
+      line.setAttribute('stroke',stroke); line.setAttribute('stroke-width','1');
+      gridGroup.appendChild(line);
+    }
+    for(let y=0; y<h; y+=step){
+      const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+      line.setAttribute('x1','0'); line.setAttribute('y1',y+'');
+      line.setAttribute('x2',w+''); line.setAttribute('y2',y+'');
+      line.setAttribute('stroke',stroke); line.setAttribute('stroke-width','1');
+      gridGroup.appendChild(line);
+    }
+  }
+
+  window.addEventListener('resize', () => { adjustLayout(); drawGrid(); redrawAll(); });
+
+  function canCreateElement(){ if(elementCount >= MAX_ELEMENTS){ limitWarning.style.display = 'block'; return false; } limitWarning.style.display = 'none'; return true; }
+
+  function createBlock(spec){ if(!canCreateElement()) return; const id = uid('blk'); const defaultW = 140, defaultH = 60; const x = 60 + (blocks.length * 20) % (svg.clientWidth/2); const y = 60 + (blocks.length * 40) % (svg.clientHeight/2); const blk = Object.assign({ id, x: snap? snapToGrid(x) : x, y: snap? snapToGrid(y) : y, w: defaultW, h: defaultH, rotation: 0, ports: [ {side:'top', offsetRatio:0.5, type:'in'}, {side:'bottom', offsetRatio:0.5, type:'out'} ], title: spec && spec.title ? spec.title : 'Block', containerId: null }, spec||{}); blocks.push(blk); elementCount++; redrawAll(); return blk; }
+
+  function createMultiPortBlock(){ if(!canCreateElement()) return; const id = uid('blk'); const defaultW = 140, defaultH = 80; const x = 60 + (blocks.length * 20) % (svg.clientWidth/2); const y = 60 + (blocks.length * 40) % (svg.clientHeight/2); const ports = []; for(let i=0;i<3;i++){ ports.push({side:'left', offsetRatio:(i+1)/4, type:'in'}); } for(let i=0;i<3;i++){ ports.push({side:'right', offsetRatio:(i+1)/4, type:'out'}); } const blk = { id, x: snap? snapToGrid(x) : x, y: snap? snapToGrid(y) : y, w: defaultW, h: defaultH, rotation: 0, ports, title:'Multiport', containerId:null }; blocks.push(blk); elementCount++; redrawAll(); return blk; }
+
+  function createContainer(){ if(!canCreateElement()) return; const id = uid('ctr'); const x = 40 + (containers.length * 10) % 200; const y = 40 + (containers.length * 20) % 200; const ctr = { id, x: snap? snapToGrid(x) : x, y: snap? snapToGrid(y) : y, w: 260, h: 160, children: [] }; containers.push(ctr); elementCount++; redrawAll(); return ctr; }
+
+  let branchAddMode = false;
+  function enableAddBranch(){ branchAddMode = true; svg.style.cursor = 'crosshair'; svg.addEventListener('pointerdown', onSvgPointerDownAddBranch); }
+  function onSvgPointerDownAddBranch(e){ if(!branchAddMode) return; const pt = clientPointToSvg(e.clientX, e.clientY); addBranch(pt.x, pt.y); branchAddMode = false; svg.style.cursor = ''; svg.removeEventListener('pointerdown', onSvgPointerDownAddBranch); }
+  function addBranch(x,y){ const id = uid('br'); branches.push({id, x: snap? snapToGrid(x):x, y: snap? snapToGrid(y):y}); redrawAll(); }
+
+  function toggleConnectMode(){ connectMode = !connectMode; const btn = document.getElementById('connectMode'); if(connectMode){ btn.classList.add('active'); svg.style.cursor='crosshair'; } else { btn.classList.remove('active'); svg.style.cursor=''; pendingConn=null; } }
+
+  function exportJSON(){ const data = {blocks, connectors, branches, containers}; const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download='diagram.json'; a.click(); URL.revokeObjectURL(url); }
+  function importJSON(){ const input = document.createElement('input'); input.type='file'; input.accept='application/json'; input.onchange = (ev) => { const f = ev.target.files[0]; if(!f) return; const r = new FileReader(); r.onload = () => { try{ const parsed = JSON.parse(r.result); if(Array.isArray(parsed.blocks)){ blocks = parsed.blocks; connectors = parsed.connectors||[]; branches = parsed.branches||[]; containers = parsed.containers||[]; elementCount = blocks.length + containers.length; redrawAll(); } else alert('Invalid import file'); }catch(err){ alert('Invalid JSON'); } }; r.readAsText(f); }; input.click(); }
+
+  function redrawAll(){ drawGrid(); drawContainers(); drawConnectors(); drawBranches(); drawBlocks(); updateStatus(); }
+  function updateStatus(){ statusEl.textContent = `Blocks: ${blocks.length} | Containers: ${containers.length} | Connectors: ${connectors.length}`; }
+  function setColorsForBackground(){ if(bgLight){ document.documentElement.style.setProperty('--paper-bg','#fff'); document.documentElement.style.setProperty('--fg','#000'); document.documentElement.style.setProperty('--accent','#f5b400'); } else { document.documentElement.style.setProperty('--paper-bg','#0b0b0b'); document.documentElement.style.setProperty('--fg','#fff'); document.documentElement.style.setProperty('--accent','#f5b400'); } const conns = connectorsGroup.querySelectorAll('.conn'); conns.forEach(c => c.setAttribute('stroke', bgLight ? '#000' : '#fff')); }
+  function toggleBackground(){ bgLight = !bgLight; svg.style.background = bgLight ? '#fff' : '#0b0b0b'; toggleBgBtn.textContent = bgLight ? 'BG: White' : 'BG: Dark'; setColorsForBackground(); drawGrid(); redrawAll(); }
+
+  function drawContainers(){ containersGroup.innerHTML = ''; for(const ctr of containers){ if(ctr.children && ctr.children.length){ let minX=1e9, minY=1e9, maxX=-1e9, maxY=-1e9; for(const bid of ctr.children){ const b = blocks.find(x=>x.id===bid); if(!b) continue; minX = Math.min(minX, b.x); minY = Math.min(minY, b.y); maxX = Math.max(maxX, b.x + b.w); maxY = Math.max(maxY, b.y + b.h); } if(maxX>-1e8){ ctr.x = minX - PADDING; ctr.y = minY - PADDING; ctr.w = (maxX - minX) + 2*PADDING; ctr.h = (maxY - minY) + 2*PADDING; } } const g = document.createElementNS('http://www.w3.org/2000/svg','g'); const rect = document.createElementNS('http://www.w3.org/2000/svg','rect'); rect.setAttribute('x', ctr.x ); rect.setAttribute('y', ctr.y ); rect.setAttribute('width', ctr.w ); rect.setAttribute('height', ctr.h ); rect.setAttribute('class','containerRect'); g.appendChild(rect); const lab = document.createElementNS('http://www.w3.org/2000/svg','text'); lab.setAttribute('x', ctr.x + 10); lab.setAttribute('y', ctr.y + 18); lab.setAttribute('class','blkText'); lab.textContent = 'Container'; g.appendChild(lab); g.addEventListener('dblclick', (ev) => { ev.stopPropagation(); selectItem('container', ctr.id, ev); }); g.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); onPointerDownMoveContainer(ev, ctr); }); containersGroup.appendChild(g); } }
+
+  function drawBlocks(){ blocksGroup.innerHTML = ''; for(const b of blocks){ const g = document.createElementNS('http://www.w3.org/2000/svg','g'); g.setAttribute('transform', `translate(${b.x},${b.y}) rotate(${b.rotation}, ${b.w/2}, ${b.h/2})`); g.dataset.id = b.id; const rect = document.createElementNS('http://www.w3.org/2000/svg','rect'); rect.setAttribute('x',0); rect.setAttribute('y',0); rect.setAttribute('width',b.w); rect.setAttribute('height',b.h); rect.setAttribute('rx',8); rect.setAttribute('ry',8); rect.setAttribute('fill', bgLight ? '#f8f8f8' : '#1e1e1e'); rect.setAttribute('stroke', bgLight ? '#000' : '#fff'); rect.setAttribute('stroke-width','1.2'); rect.classList.add('blockRect'); g.appendChild(rect); const t = document.createElementNS('http://www.w3.org/2000/svg','text'); t.setAttribute('x',8); t.setAttribute('y',18); t.setAttribute('class','blkText'); t.textContent = b.title || 'Block'; g.appendChild(t); b.ports.forEach((p, idx) => { const pt = portPosition(b, p); const port = document.createElementNS('http://www.w3.org/2000/svg','circle'); port.setAttribute('cx', pt.x); port.setAttribute('cy', pt.y); port.setAttribute('r',6); port.setAttribute('class','port'); port.dataset.bid = b.id; port.dataset.pindex = idx; port.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); onPortPointerDown(ev, b, p, idx); }); g.appendChild(port); }); if(selected && selected.type==='block' && selected.id===b.id){ const overlay = document.createElementNS('http://www.w3.org/2000/svg','rect'); overlay.setAttribute('x',0); overlay.setAttribute('y',0); overlay.setAttribute('width',b.w); overlay.setAttribute('height',b.h); overlay.setAttribute('class','selOverlay'); overlay.setAttribute('fill-opacity', SELECT_OVERLAY_OPACITY === 0.8 ? '0.8' : '0.2'); g.appendChild(overlay); } g.addEventListener('pointerdown', (ev)=> { ev.stopPropagation(); onPointerDownMoveBlock(ev, b); }); g.addEventListener('dblclick', (ev)=> { ev.stopPropagation(); selectItem('block', b.id, ev); }); blocksGroup.appendChild(g); } }
+
+  function drawBranches(){ branchesGroup.innerHTML = ''; for(const br of branches){ const g = document.createElementNS('http://www.w3.org/2000/svg','g'); const c = document.createElementNS('http://www.w3.org/2000/svg','circle'); c.setAttribute('cx', br.x ); c.setAttribute('cy', br.y ); c.setAttribute('r',7); c.setAttribute('class','branchNode'); c.dataset.id = br.id; c.addEventListener('pointerdown', (ev)=> { ev.stopPropagation(); onPointerDownMoveBranch(ev, br); }); c.addEventListener('dblclick', (ev) => { ev.stopPropagation(); selectItem('branch', br.id, ev); }); g.appendChild(c); branchesGroup.appendChild(g); } }
+
+  function drawConnectors(){ connectorsGroup.innerHTML = ''; for(const c of connectors){ const pathEl = document.createElementNS('http://www.w3.org/2000/svg','path'); pathEl.setAttribute('class','conn'); pathEl.classList.add(orthogonal ? 'orth' : ''); const col = bgLight ? '#000' : '#fff'; pathEl.setAttribute('stroke', col); pathEl.setAttribute('fill','none'); pathEl.dataset.id = c.id; pathEl.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); selectConnector(c.id, ev); }); const d = connectorPath(c); pathEl.setAttribute('d', d); connectorsGroup.appendChild(pathEl); } }
+
+  function portPosition(block, port){ let x=0,y=0; if(port.side === 'top'){ x = block.w * port.offsetRatio; y = 0; } else if(port.side === 'bottom'){ x = block.w * port.offsetRatio; y = block.h; } else if(port.side === 'left'){ x = 0; y = block.h * port.offsetRatio; } else if(port.side === 'right'){ x = block.w; y = block.h * port.offsetRatio; } return {x, y}; }
+  function localToGlobal(block, local){ const cx = block.x + block.w/2, cy = block.y + block.h/2; const cos = Math.cos(block.rotation * Math.PI/180), sin = Math.sin(block.rotation * Math.PI/180); const rx = block.x + local.x - cx, ry = block.y + local.y - cy; const gx = cx + rx*cos - ry*sin; const gy = cy + rx*sin + ry*cos; return {x: gx, y: gy}; }
+  function connectorEndpoint(corner){ if(corner.type === 'block'){ const b = blocks.find(x=>x.id===corner.id); if(!b) return {x:0,y:0}; const p = b.ports[corner.portIndex]; const local = portPosition(b,p); return localToGlobal(b, local); } else { const br = branches.find(x=>x.id===corner.id); if(!br) return {x:0,y:0}; return {x: br.x, y: br.y}; } }
+
+  function connectorPath(conn){ const a = connectorEndpoint(conn.from); const b = connectorEndpoint(conn.to); if(!orthogonal){ return `M ${a.x} ${a.y} L ${b.x} ${b.y}`; } const candidates = []; candidates.push([ {x:a.x,y:a.y}, {x:b.x,y:a.y}, {x:b.x,y:b.y} ]); candidates.push([ {x:a.x,y:a.y}, {x:a.x,y:b.y}, {x:b.x,y:b.y} ]); const midY = (a.y + b.y)/2; candidates.push([ {x:a.x,y:a.y}, {x:a.x,y:midY}, {x:b.x,y:midY}, {x:b.x,y:b.y} ]); const midX = (a.x + b.x)/2; candidates.push([ {x:a.x,y:a.y}, {x:midX,y:a.y}, {x:midX,y:b.y}, {x:b.x,y:b.y} ]); const scored = candidates.map(seg => { let len=0; let prev = seg[0]; for(let i=1;i<seg.length;i++){ const dx = seg[i].x - prev.x, dy = seg[i].y - prev.y; len += Math.abs(dx)+Math.abs(dy); prev = seg[i]; } return {seg, len, bends: seg.length-2}; }); scored.sort((p,q) => { if(preferFewBends && p.bends !== q.bends) return p.bends - q.bends; return p.len - q.len; }); const best = scored[0].seg; let d = `M ${best[0].x} ${best[0].y}`; for(let i=1;i<best.length;i++){ d += ` L ${best[i].x} ${best[i].y}`; } return d; }
+
+  function selectItem(type,id, ev){ selected = {type, id}; redrawAll(); showContextMenuForSelected(ev.clientX, ev.clientY); }
+  function selectConnector(connId, ev){ selected = {type:'connector', id: connId}; redrawAll(); showContextMenuForConnector(ev.clientX, ev.clientY, connId); }
+
+  function showContextMenuForConnector(cx, cy, connId){ ctxMenu.style.display = 'block'; ctxMenu.style.left = cx + 'px'; ctxMenu.style.top = cy + 'px'; ctxMenu.innerHTML = ''; const mk = (label, cb) => { const b = document.createElement('button'); b.textContent = label; b.addEventListener('click', () => { cb(); hideCtx(); }); ctxMenu.appendChild(b); }; mk('Create Derivation Branch Here', () => { const pt = clientPointToSvg(cx, cy); addBranch(pt.x, pt.y); }); mk('Delete Connector', () => { connectors = connectors.filter(c => c.id !== connId); redrawAll(); }); mk('Cancel', ()=>{}); }
+
+  function showContextMenuForSelected(cx, cy){ ctxMenu.style.display = 'block'; ctxMenu.style.left = cx + 'px'; ctxMenu.style.top = cy + 'px'; ctxMenu.innerHTML = ''; const mk = (label, cb) => { const b = document.createElement('button'); b.textContent = label; b.addEventListener('click', () => { cb(); hideCtx(); }); ctxMenu.appendChild(b); }; if(selected.type === 'block'){ const id = selected.id; mk('Copy', () => { copyBlock(id); }); mk('Move (Drag)', () => {}); mk('Rotate -90', () => { rotateBlock(id, -90); }); mk('Rotate +90', () => { rotateBlock(id, 90); }); mk('Delete', () => { deleteBlock(id); }); mk('Align Center to...', () => { startAlignCenterAction(id); }); } else if(selected.type === 'container'){ const id = selected.id; mk('Delete Container (keep children)', () => { deleteContainer(id, false); }); mk('Delete Container and children', () => { deleteContainer(id, true); }); mk('Cancel', () => {}); } else if(selected.type === 'branch'){ const id = selected.id; mk('Delete Branch', () => { branches = branches.filter(b=>b.id!==id); connectors = connectors.filter(c=> c.from.id!==id && c.to.id!==id); redrawAll(); }); } mk('Close', ()=>{}); }
+
+  function hideCtx(){ ctxMenu.style.display = 'none'; }
+  document.addEventListener('pointerdown', (ev) => { if(ev.button === 0) hideCtx(); });
+
+  function copyBlock(id){ const b = blocks.find(x=>x.id===id); if(!b) return; if(!canCreateElement()) return; const clone = JSON.parse(JSON.stringify(b)); clone.id = uid('blk'); clone.x += 20; clone.y += 20; blocks.push(clone); elementCount++; redrawAll(); }
+  function rotateBlock(id, degrees){ const b = blocks.find(x=>x.id===id); if(!b) return; b.rotation = (b.rotation + degrees) % 360; redrawAll(); }
+  function deleteBlock(id){ blocks = blocks.filter(b=>b.id!==id); connectors = connectors.filter(c => c.from.id !== id && c.to.id !== id); elementCount = Math.max(0, elementCount-1); selected = null; redrawAll(); }
+  function deleteContainer(id, removeChildren){ const ctr = containers.find(c=>c.id===id); if(!ctr) return; if(removeChildren){ for(const bid of ctr.children){ blocks = blocks.filter(b=>b.id!==bid); connectors = connectors.filter(c => c.from.id !== bid && c.to.id !== bid); elementCount = Math.max(0, elementCount-1); } } else { for(const bid of ctr.children){ const b = blocks.find(bb=>bb.id===bid); if(b) b.containerId = null; } } containers = containers.filter(c=>c.id!==id); elementCount = Math.max(0, elementCount-1); redrawAll(); }
+
+  function onPointerDownMoveBlock(ev, block){ ev.preventDefault(); ev.stopPropagation(); const start = clientPointToSvg(ev.clientX, ev.clientY); const origX = block.x, origY = block.y; const pointerId = ev.pointerId; let longpress = false; const longTimer = setTimeout(()=>{ longpress = true; selectItem('block', block.id, ev); }, 600); svg.setPointerCapture && svg.setPointerCapture(pointerId); function onMove(me){ const pt = clientPointToSvg(me.clientX, me.clientY); let nx = origX + (pt.x - start.x); let ny = origY + (pt.y - start.y); if(snap){ nx = snapToGrid(nx); ny = snapToGrid(ny); } block.x = nx; block.y = ny; assignBlockToContainer(block); redrawAll(); } function onUp(up){ clearTimeout(longTimer); svg.releasePointerCapture && svg.releasePointerCapture(pointerId); document.removeEventListener('pointermove', onMove); document.removeEventListener('pointerup', onUp); if(!longpress){} redrawAll(); } document.addEventListener('pointermove', onMove); document.addEventListener('pointerup', onUp); }
+
+  function onPointerDownMoveContainer(ev, container){ ev.preventDefault(); ev.stopPropagation(); const start = clientPointToSvg(ev.clientX, ev.clientY); const origX = container.x, origY = container.y; const pointerId = ev.pointerId; svg.setPointerCapture && svg.setPointerCapture(pointerId); function onMove(me){ const pt = clientPointToSvg(me.clientX, me.clientY); let nx = origX + (pt.x - start.x); let ny = origY + (pt.y - start.y); if(snap){ nx = snapToGrid(nx); ny = snapToGrid(ny); } container.x = nx; container.y = ny; if(container.children){ for(const bid of container.children){ const b = blocks.find(bb=>bb.id===bid); if(!b) continue; b.x += (container.x - origX); b.y += (container.y - origY); } } redrawAll(); } function onUp(up){ svg.releasePointerCapture && svg.releasePointerCapture(pointerId); document.removeEventListener('pointermove', onMove); document.removeEventListener('pointerup', onUp); redrawAll(); }
+  document.addEventListener('pointermove', onMove);
+  document.addEventListener('pointerup', onUp);
+}
+
+  function onPointerDownMoveBranch(ev, br){ ev.preventDefault(); ev.stopPropagation(); const start = clientPointToSvg(ev.clientX, ev.clientY); const origX = br.x, origY = br.y; const pointerId = ev.pointerId; svg.setPointerCapture && svg.setPointerCapture(pointerId); function onMove(me){ const pt = clientPointToSvg(me.clientX, me.clientY); let nx = origX + (pt.x - start.x); let ny = origY + (pt.y - start.y); if(snap){ nx = snapToGrid(nx); ny = snapToGrid(ny); } br.x = nx; br.y = ny; redrawAll(); } function onUp(up){ svg.releasePointerCapture && svg.releasePointerCapture(pointerId); document.removeEventListener('pointermove', onMove); document.removeEventListener('pointerup', onUp); redrawAll(); }
+document.addEventListener('pointermove', onMove);
+document.addEventListener('pointerup', onUp);
+}
+
+  function assignBlockToContainer(block){ for(const c of containers){ if(block.x >= c.x && block.y >= c.y && (block.x+block.w) <= (c.x + c.w) && (block.y+block.h) <= (c.y + c.h)){ block.containerId = c.id; if(!c.children) c.children = []; if(!c.children.includes(block.id)) c.children.push(block.id); } else { if(c.children) c.children = c.children.filter(cid => cid !== block.id); if(block.containerId === c.id) block.containerId = null; } } }
+
+  function onPortPointerDown(ev, block, port, idx){ ev.preventDefault(); ev.stopPropagation(); if(!connectMode){ selectItem('block', block.id, ev); return; } const corner = { type: 'block', id: block.id, portIndex: idx }; if(!pendingConn){ pendingConn = corner; } else { if(pendingConn.id === corner.id && pendingConn.portIndex === corner.portIndex){ pendingConn = null; return; } const conn = { id: uid('c'), from: pendingConn, to: corner, orth: orthogonal }; connectors.push(conn); pendingConn = null; redrawAll(); } }
+
+  function clientPointToSvg(clientX, clientY){ const pt = svg.createSVGPoint(); pt.x = clientX; pt.y = clientY; const ctm = svg.getScreenCTM().inverse(); const sp = pt.matrixTransform(ctm); return {x: sp.x, y: sp.y}; }
+
+  function startAlignCenterAction(referenceId){ if(!referenceId){ alert('Select a block to align center to: open its context menu and choose Align Center to...'); return; } const ref = blocks.find(b=>b.id===referenceId); if(!ref) return; if(!selected || selected.type !== 'block'){ alert('Now click the block you want to align to the center of the reference block.'); function handleClick(ev){ if(ev.target && ev.target.closest){ const g = ev.target.closest('g'); if(!g) return; const bid = g.dataset.id; const target = blocks.find(bb=>bb.id===bid); if(target){ performAlignCenter(ref, target); svg.removeEventListener('pointerdown', handleClick); } } } svg.addEventListener('pointerdown', handleClick); return; } else { const target = blocks.find(b=>b.id===selected.id); if(!target) return; performAlignCenter(ref, target); } }
+
+  function performAlignCenter(ref, target){ const centerX = ref.x + ref.w/2; alignPreviewGroup.innerHTML = ''; const line = document.createElementNS('http://www.w3.org/2000/svg','line'); line.setAttribute('x1', centerX); line.setAttribute('y1', 0); line.setAttribute('x2', centerX); line.setAttribute('y2', svg.clientHeight); line.setAttribute('class','dottedLine'); alignPreviewGroup.appendChild(line); const acceptBtn = document.createElement('button'); acceptBtn.textContent = 'Accept Align'; acceptBtn.className='small'; const cancelBtn = document.createElement('button'); cancelBtn.textContent = 'Cancel'; cancelBtn.className='small'; const wrapper = document.createElement('div'); wrapper.style.position='absolute'; wrapper.style.zIndex=200; wrapper.style.left='16px'; wrapper.style.top='16px'; wrapper.appendChild(acceptBtn); wrapper.appendChild(cancelBtn); document.getElementById('canvasWrap').appendChild(wrapper); acceptBtn.addEventListener('click', ()=>{ target.x = centerX - target.w/2; if(snap) target.x = snapToGrid(target.x); alignPreviewGroup.innerHTML=''; wrapper.remove(); redrawAll(); }); cancelBtn.addEventListener('click', ()=>{ alignPreviewGroup.innerHTML = ''; wrapper.remove(); }); }
+
+  function snapAllToGrid(){ for(const b of blocks){ b.x = snapToGrid(b.x); b.y = snapToGrid(b.y); } for(const br of branches){ br.x = snapToGrid(br.x); br.y = snapToGrid(br.y); } redrawAll(); }
+  function deleteConnector(id){ connectors = connectors.filter(c=>c.id!==id); redrawAll(); }
+  function selectConnectorById(id){ selected = {type:'connector', id}; redrawAll(); }
+
+  function createSample(){ blocks=[]; connectors=[]; containers=[]; branches=[]; elementCount = 0; const up = createBlock({title:'UPSTREAM', x:100, y:40}); const ctr = createContainer(); ctr.x = 60; ctr.y = 160; ctr.w = 420; ctr.h = 220; const a = createBlock({title:'Branch A', x:80, y:200}); const b = createMultiPortBlock(); b.x = 240; b.y = 200; ctr.children = [a.id, b.id]; a.containerId = ctr.id; b.containerId = ctr.id; const down = createBlock({title:'DOWNSTREAM', x:180, y:420}); connectors.push({id:uid('c'), from:{type:'block',id:up.id,portIndex:1}, to:{type:'block',id:a.id,portIndex:0}, orth:true}); connectors.push({id:uid('c'), from:{type:'block',id:a.id,portIndex:1}, to:{type:'block',id:b.id,portIndex:3}, orth:true}); connectors.push({id:uid('c'), from:{type:'block',id:b.id,portIndex:4}, to:{type:'block',id:down.id,portIndex:0}, orth:true}); const br = {id:uid('br'), x:160, y:320}; branches.push(br); connectors.push({id:uid('c'), from:{type:'block',id:b.id,portIndex:4}, to:{type:'branch',id:br.id}, orth:true}); connectors.push({id:uid('c'), from:{type:'branch',id:br.id}, to:{type:'block',id:down.id,portIndex:0}, orth:true}); redrawAll(); }
+
+  // layout adjustment for mobile/desktop
+  function adjustLayout(){ const isMobile = window.innerWidth <= 860; const body = document.body; if(isMobile){ body.classList.add('mobile'); } else { body.classList.remove('mobile'); } // ensure svg redrawn for new viewport
+    svg.setAttribute('width', '100%'); svg.setAttribute('height', '100%'); drawGrid(); }
+
+  // initialize
+  adjustLayout(); createSample();
+
+  window._diag = {blocks, connectors, branches, containers, redrawAll};
+})();
+</script>
+</body>
+</html>
