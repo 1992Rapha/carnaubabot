@@ -1,70 +1,28 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SVG Diagram Editor</title>
-    <style>
-        /* Add your CSS styles here */
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #f0f0f0;
-        }
-        canvas {
-            border: 1px solid #ccc;
-        }
-    </style>
-</head>
-<body>
-    <canvas id="diagramCanvas" width="800" height="600"></canvas>
-    <script>
-        // Initialize canvas and context
-        const canvas = document.getElementById('diagramCanvas');
-        const ctx = canvas.getContext('2d');
-
-        // Diagram variables
-        const blocks = []; // Array for blocks
-        const connections = []; // Array for connections
-
-        // Function to add blocks, draw, and interact with the diagram
-        function addBlock(x, y) {
-            // Implement block creation logic
-            
-        }
-
-        function draw() {
-            // Implement drawing logic including blocks and connections
-            
-        }
-
-        function update() {
-            // Implement automatic connector recomputation
-            
-        }
-
-        // Event listeners for mouse and touch interactions
-        canvas.addEventListener('mousedown', (e) => {
-            // Handle mouse down events
-            
-        });
-
-        canvas.addEventListener('touchstart', (e) => {
-            // Handle touch start events
-            
-        });
-
-        // Render the diagram
-        setInterval(() => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            draw();
-            update();
-        }, 100);
-    </script>
-</body>
-</html>
+<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <marker id="arrow" markerWidth="10" markerHeight="7" 
+                refX="0" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" />
+        </marker>
+    </defs>
+    <g>
+        <!-- Example Multiport Block -->
+        <rect x="50" y="50" width="150" height="100" stroke="black" fill="lightgrey" />
+        <text x="125" y="100" text-anchor="middle">Multiport Block</text>
+        <!-- Snapping toggle and alignment guides demonstration -->
+        <line x1="0" y1="300" x2="800" y2="300" stroke="lightblue" stroke-dasharray="5,5" />
+        <rect x="200" y="250" width="150" height="100" stroke="black" fill="lightyellow" />
+        <text x="275" y="300" text-anchor="middle">Snapping Toggle</text>
+    </g>
+    <!-- Advanced routing with fewer bends -->
+    <path d="M50 200 Q 150 100, 300 200 T 500 200" stroke="black" fill="transparent" marker-end="url(#arrow)" />
+    <!-- Branch derivation nodes -->
+    <circle cx="300" cy="200" r="10" fill="blue" />
+    <text x="300" y="215" text-anchor="middle">Branch Node</text>
+    <circle cx="500" cy="200" r="10" fill="blue" />
+    <text x="500" y="215" text-anchor="middle">Branch Node</text>
+    <g>
+        <rect x="700" y="500" width="80" height="30" stroke="black" fill="grey" />
+        <text x="740" y="520" text-anchor="middle" fill="white">Context Menu</text>
+    </g>
+</svg>
