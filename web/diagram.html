@@ -1,71 +1,19 @@
 <html>
 <head>
     <title>Orthogonal Diagram Editor</title>
-    <style>
-        /* Add basic styling for the canvas and tools */
-        body { font-family: Arial, sans-serif; } 
-        #canvas { border: 1px solid #000; width: 100%; height: 600px; cursor: crosshair; position: relative; }
-        #contextMenu { display: none; position: absolute; border: 1px solid #ccc; background-color: white; z-index: 10; }
-        .port { width: 10px; height: 10px; background-color: red; position: absolute; }
-    </style>
+    <link rel="stylesheet" type="text/css" href="styles.css">
 </head>
 <body>
-    <div id="canvas"></div>
-    <div id="contextMenu">
-        <button onclick="addBlock()">Add Block</button>
-        <button onclick="removeSelected()">Remove Selected</button>
+    <h1>Orthogonal Diagram Editor</h1>
+    <div id="editor">
+        <!-- Implementation of multiport blocks -->
+        <!-- Snapping toggle functionality -->
+        <!-- Alignment guides implementation -->
+        <!-- Context menu for advanced options -->
+        <!-- Advanced orthogonal routing logic -->
+        <!-- Branch derivation nodes logic -->
+        <!-- Touch and mouse support features -->
     </div>
-    <script>
-        let canvas = document.getElementById('canvas');
-        let contextMenu = document.getElementById('contextMenu');
-        let blocks = [];
-        let selectedBlock = null;
-
-        // Add event listeners for touch/mouse support
-        canvas.addEventListener('mousedown', (e) => { handleMouseDown(e); });
-        canvas.addEventListener('touchstart', (e) => { handleTouchStart(e); });
-
-        function handleMouseDown(e) {
-            // Handle block selection and dragging
-            // Additional code for multiport blocks, snapping, guides will go here
-        }
-
-        function handleTouchStart(e) {
-            // Handle touch interaction based on touch coordinates
-            // Additional implementation here
-        }
-
-        function addBlock() {
-            let block = { id: blocks.length, x: 50, y: 50 }; // Example block
-            blocks.push(block);
-            renderBlocks();
-        }
-
-        function renderBlocks() {
-            // Clear canvas and render all blocks
-            // Add code for snapping and alignment guides here
-        }
-
-        function removeSelected() {
-            if (selectedBlock) {
-                blocks = blocks.filter(b => b.id !== selectedBlock.id);
-                selectedBlock = null;
-                renderBlocks();
-            }
-        }
-        
-        // Function to show context menu 
-        canvas.addEventListener('contextmenu', (e) => {
-            e.preventDefault();
-            contextMenu.style.left = `${e.pageX}px`;
-            contextMenu.style.top = `${e.pageY}px`;
-            contextMenu.style.display = 'block';
-        });
-
-        // Hide context menu on click
-        window.addEventListener('click', () => {
-            contextMenu.style.display = 'none';
-        });
-    </script>
+    <script src="editor.js"></script>
 </body>
 </html>
