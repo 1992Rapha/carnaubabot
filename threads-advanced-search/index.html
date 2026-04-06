@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Threads Advanced Search</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="hero">
+      <div>
+        <h1>Threads Advanced Search</h1>
+        <p class="subtitle">Client-side webapp for searching public Threads posts with boolean expressions.</p>
+      </div>
+      <div class="badges">
+        <span class="badge">Webapp only</span>
+        <span class="badge">No backend</span>
+        <span class="badge">Boolean logic</span>
+      </div>
+    </header>
+
+    <main class="grid">
+      <section class="panel controls">
+        <h2>Search</h2>
+
+        <label for="apiMode">Source</label>
+        <select id="apiMode">
+          <option value="rsshub">Third-party RSSHub profile feed</option>
+          <option value="custom">Custom JSON endpoint</option>
+        </select>
+
+        <div id="rsshubFields">
+          <label for="username">Threads username</label>
+          <input id="username" placeholder="zuck" />
+
+          <label for="rsshubBase">RSSHub base URL</label>
+          <input id="rsshubBase" value="https://rsshub.app" />
+          <small>Uses <code>/threads/user/:username</code>. A public RSSHub instance may rate limit or block some requests.</small>
+        </div>
+
+        <div id="customFields" class="hidden">
+          <label for="customUrl">Custom endpoint URL</label>
+          <input id="customUrl" placeholder="https://example.com/threads-feed.json" />
+          <small>Expected JSON array or <code>{ posts: [...] }</code>. Each post should include text/content/body and optionally url, author, date.</small>
+        </div>
+
+        <label for="expression">Boolean expression</label>
+        <textarea id="expression" rows="4" placeholder='("ai" AND "open source") OR (meta XOR instagram) NOT spam'></textarea>
+        <small>Supported operators: <code>AND</code>, <code>OR</code>, <code>NOT</code>, <code>XOR</code>, parentheses, quoted phrases.</small>
+
+        <div class="row two">
+          <div>
+            <label for="limit">Max posts</label>
+            <input id="limit" type="number" min="1" max="200" value="50" />
+          </div>
+          <div>
+            <label for="caseSensitive">Case sensitive</label>
+            <select id="caseSensitive">
+              <option value="false" selected>No</option>
+              <option value="true">Yes</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="searchBtn">Search posts</button>
+          <button id="sampleBtn" class="secondary">Load sample data</button>
+          <button id="downloadBtn" class="secondary">Download results JSON</button>
+        </div>
+
+        <details class="notes">
+          <summary>Important API note</summary>
+          <p><strong>Verified historically:</strong> the official Threads API has been oriented around account/media publishing and account-managed data, not broad public keyword search across Threads. Because this is a static webapp with no backend, the app defaults to a third-party public feed path (RSSHub) or a user-supplied JSON endpoint.</p>
+          <p><strong>Uncertainty:</strong> availability, CORS, route support, and rate limits depend on the third-party endpoint you use.</p>
+        </details>
+      </section>
+
+      <section class="panel results-panel">
+        <div class="results-head">
+          <h2>Matching posts</h2>
+          <span id="status">Idle</span>
+        </div>
+        <div id="summary" class="summary"></div>
+        <div id="results" class="results"></div>
+      </section>
+    </main>
+  </div>
+
+  <template id="resultTemplate">
+    <article class="result-card">
+      <div class="result-meta">
+        <span class="author"></span>
+        <span class="date"></span>
+      </div>
+      <p class="content"></p>
+      <div class="result-footer">
+        <a class="post-link" target="_blank" rel="noopener noreferrer">Open post</a>
+      </div>
+    </article>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>
