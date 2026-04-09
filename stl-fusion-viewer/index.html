@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>STL Fusion Viewer</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <h1>STL Fusion Viewer</h1>
+        <p class="subtitle">
+          Load two STL files and compare them as an overlaid fused mesh.
+        </p>
+
+        <section class="panel">
+          <label class="file-picker">
+            <span>STL A</span>
+            <input id="fileA" type="file" accept=".stl" />
+          </label>
+          <label class="file-picker">
+            <span>STL B</span>
+            <input id="fileB" type="file" accept=".stl" />
+          </label>
+          <div class="button-row">
+            <button id="resetCameraBtn" type="button">Reset camera</button>
+            <button id="clearBtn" type="button">Clear scene</button>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Fusion options</h2>
+          <label class="toggle-row">
+            <span>Align by centroid</span>
+            <input id="alignCenters" type="checkbox" checked />
+          </label>
+          <label class="toggle-row">
+            <span>Show wireframe</span>
+            <input id="showWireframe" type="checkbox" checked />
+          </label>
+          <label class="toggle-row">
+            <span>Show solid meshes</span>
+            <input id="showSolid" type="checkbox" checked />
+          </label>
+          <label>
+            <span>Opacity STL A</span>
+            <input id="opacityA" type="range" min="0.05" max="1" step="0.05" value="0.55" />
+          </label>
+          <label>
+            <span>Opacity STL B</span>
+            <input id="opacityB" type="range" min="0.05" max="1" step="0.05" value="0.55" />
+          </label>
+        </section>
+
+        <section class="panel">
+          <h2>Model info</h2>
+          <div id="status" class="status">Load two STL files to start.</div>
+          <dl class="metrics">
+            <div>
+              <dt>Triangles A</dt>
+              <dd id="trianglesA">-</dd>
+            </div>
+            <div>
+              <dt>Triangles B</dt>
+              <dd id="trianglesB">-</dd>
+            </div>
+            <div>
+              <dt>Bounds A</dt>
+              <dd id="boundsA">-</dd>
+            </div>
+            <div>
+              <dt>Bounds B</dt>
+              <dd id="boundsB">-</dd>
+            </div>
+          </dl>
+          <p class="hint">
+            Tip: the viewer assumes both STLs are already in the same coordinate system. "Align by centroid" is useful for quick visual comparison when they are close but offset.
+          </p>
+        </section>
+      </aside>
+
+      <main class="viewer-area">
+        <canvas id="viewer"></canvas>
+        <div class="legend">
+          <span class="legend-chip chip-a"></span> STL A
+          <span class="legend-chip chip-b"></span> STL B
+        </div>
+      </main>
+    </div>
+
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>
