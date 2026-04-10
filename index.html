@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mesclar PDFs</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib/dist/pdf-lib.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.min.mjs" type="module"></script>
+</head>
+<body>
+  <main class="app-shell">
+    <section class="card hero">
+      <h1>Mesclar múltiplos PDFs</h1>
+      <p class="subtitle">Junte vários arquivos PDF em um único documento, mantendo a sequência dos arquivos e das páginas. Tudo roda no navegador.</p>
+    </section>
+
+    <section class="card">
+      <div id="dropzone" class="dropzone" tabindex="0" aria-label="Área para soltar arquivos PDF">
+        <input id="fileInput" type="file" accept="application/pdf" multiple hidden />
+        <div class="dropzone-content">
+          <p><strong>Arraste e solte</strong> seus PDFs aqui</p>
+          <p>ou</p>
+          <button id="selectButton" class="button secondary" type="button">Selecionar arquivos</button>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <label class="checkbox-row">
+          <input type="checkbox" id="optimizeToggle" />
+          <span>Otimizar tamanho do PDF final</span>
+        </label>
+
+        <label class="field-inline" for="qualityRange">
+          <span>Qualidade da otimização</span>
+          <input type="range" id="qualityRange" min="45" max="95" step="5" value="75" disabled />
+          <output id="qualityValue">75%</output>
+        </label>
+      </div>
+
+      <p class="hint" id="optimizeHint">Desativado: preserva melhor a fidelidade original. Ao ativar, as páginas serão reprocessadas para reduzir o tamanho do arquivo.</p>
+
+      <div class="list-header">
+        <h2>Arquivos na ordem de mesclagem</h2>
+        <button id="clearButton" class="button ghost" type="button">Limpar lista</button>
+      </div>
+
+      <ul id="fileList" class="file-list" aria-live="polite"></ul>
+
+      <div class="actions">
+        <button id="mergeButton" class="button primary" type="button" disabled>Mesclar PDFs</button>
+      </div>
+
+      <div id="status" class="status" role="status" aria-live="polite"></div>
+      <a id="downloadLink" class="button success hidden" download="pdf-mesclado.pdf">Baixar PDF mesclado</a>
+    </section>
+  </main>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
