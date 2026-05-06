@@ -1,0 +1,4 @@
+name,bus1,bus2,phases,kv,length_km,ampacity_a,conductor,r1_ohm_km,x1_ohm_km,r0_ohm_km,x0_ohm_km
+L1,SOURCE,BUS1,3,13.8,0.3,180,Al 1/0 AWG,0.52,0.09,1.56,0.27
+L2,BUS1,BUS2,3,0.38,0.08,120,Cu 35 mm2,0.524,0.08,1.572,0.24
+L3,BUS2,BUS3,3,0.38,0.06,89,Cu 25 mm2,0.727,0.08,2.181,0.24
