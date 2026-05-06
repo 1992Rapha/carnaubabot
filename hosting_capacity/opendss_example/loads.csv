@@ -1,0 +1,3 @@
+name,bus,phases,kv,kw,pf,conn,model,daily
+LOAD_BUS2,BUS2,3,0.38,35,0.92,wye,1,
+LOAD_BUS3,BUS3,3,0.38,18,0.92,wye,1,
