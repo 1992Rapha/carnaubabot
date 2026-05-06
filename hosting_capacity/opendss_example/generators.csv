@@ -1,0 +1,2 @@
+name,bus,phases,kv,kw,pf,conn,daily
+PV_BUS3,BUS3,3,0.38,20,1.0,wye,
