@@ -1,0 +1,5 @@
+bus,min_voltage_pu,max_voltage_pu,voltage_unbalance_pct,violation
+SOURCE,0.998,1.002,0.3,false
+BUS1,0.982,1.018,1.1,false
+BUS2,0.948,1.041,2.1,false
+BUS3,0.913,1.067,3.8,true
