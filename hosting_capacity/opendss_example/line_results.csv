@@ -1,0 +1,4 @@
+name,max_current_a,max_loading_pct,violation
+L1,72,40,false
+L2,116,96.7,false
+L3,101,113.5,true
