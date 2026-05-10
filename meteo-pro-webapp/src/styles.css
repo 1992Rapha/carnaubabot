@@ -1,0 +1,64 @@
+:root {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #e5eefb;
+  background: #08111f;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: radial-gradient(circle at top left, #17345c, #08111f 45%, #050914); }
+a { color: inherit; }
+main { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 32px 0 56px; }
+
+.hero {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  padding: 48px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 28px;
+  background: linear-gradient(135deg, rgba(20, 71, 122, .8), rgba(7, 14, 27, .82));
+  box-shadow: 0 24px 80px rgba(0,0,0,.3);
+}
+
+.eyebrow { text-transform: uppercase; letter-spacing: .12em; color: #9bd1ff; font-size: .78rem; font-weight: 800; }
+h1 { font-size: clamp(2.4rem, 6vw, 5rem); line-height: .96; margin: 12px 0; }
+h2 { margin: 0 0 12px; font-size: clamp(1.5rem, 3vw, 2rem); }
+h3 { margin: 0 0 8px; }
+p { color: #b8c7dc; line-height: 1.65; }
+
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 18px 0; }
+.stats div, .panel, .feature-card, .source-row {
+  border: 1px solid rgba(255,255,255,.1);
+  background: rgba(10, 22, 39, .78);
+  border-radius: 22px;
+  box-shadow: 0 14px 40px rgba(0,0,0,.18);
+}
+.stats div { padding: 20px; }
+.stats strong { display: block; font-size: 1.8rem; }
+.stats span { color: #9fb1c8; }
+.panel { padding: 28px; margin-top: 18px; }
+
+.chip-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip-list span {
+  display: inline-flex;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: rgba(113, 182, 255, .12);
+  border: 1px solid rgba(113, 182, 255, .18);
+  color: #d5ebff;
+  font-size: .86rem;
+}
+.compact span { font-size: .76rem; padding: 5px 8px; }
+
+.feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.feature-card { padding: 18px; }
+
+.source-table { display: grid; gap: 12px; }
+.source-row { padding: 18px; }
+.source-row p { margin: 4px 0 12px; }
+
+@media (max-width: 760px) {
+  main { width: min(100% - 20px, 1180px); padding-top: 16px; }
+  .hero, .panel { padding: 20px; }
+  .stats { grid-template-columns: 1fr; }
+}
