@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AltoQi Elétrico - Ferramenta NBR 5410</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="logo">
+                <h1>⚡ AltoQi</h1>
+                <p>NBR 5410</p>
+            </div>
+            <nav class="main-nav">
+                <ul>
+                    <li><a href="#" data-module="dashboard" class="nav-link active">📊 Dashboard</a></li>
+                    <li><a href="#" data-module="cadastro" class="nav-link">📋 1. Cadastro</a></li>
+                    <li><a href="#" data-module="lampadas" class="nav-link">💡 2. Lâmpadas</a></li>
+                    <li><a href="#" data-module="tomadas" class="nav-link">🔌 3. Tomadas</a></li>
+                    <li><a href="#" data-module="quadros" class="nav-link">⚡ 4. Quadros</a></li>
+                    <li><a href="#" data-module="pontos" class="nav-link">📍 5. Pontos</a></li>
+                    <li><a href="#" data-module="condutos-lanc" class="nav-link">🔧 7. Condutos</a></li>
+                    <li><a href="#" data-module="quadros-ops" class="nav-link">⚙️ 8-9. Operações</a></li>
+                    <li><a href="#" data-module="fiacao" class="nav-link">🧵 11-12. Fiação</a></li>
+                    <li><a href="#" data-module="dimensionamento" class="nav-link">📐 13. Dimensionamento</a></li>
+                    <li><a href="#" data-module="erros" class="nav-link">⚠️ 14-15. Erros</a></li>
+                    <li><a href="#" data-module="detalhamentos" class="nav-link">📄 16-17. Documentação</a></li>
+                    <li><a href="#" data-module="outros" class="nav-link">🎛️ 18. Outros</a></li>
+                    <li><a href="#" data-module="fotovoltaico" class="nav-link">☀️ Fotovoltaico</a></li>
+                    <li><a href="quadro-cargas.html" class="nav-link">📊 Quadro de Cargas</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-header">
+                <h2 id="page-title">Dashboard</h2>
+                <div class="header-actions">
+                    <button class="btn btn-primary" id="btn-novo-projeto">+ Novo Projeto</button>
+                    <button class="btn btn-secondary" id="btn-salvar-projeto">💾 Salvar</button>
+                </div>
+            </header>
+
+            <div id="content-area" class="content-area">
+                <!-- Seções dos módulos serão inseridas aqui dinamicamente -->
+            </div>
+        </main>
+    </div>
+
+    <div id="toast-container" class="toast-container"></div>
+    <script src="app.js"></script>
+</body>
+</html>
