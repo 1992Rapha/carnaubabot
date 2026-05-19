@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ferramenta de Dimensionamento Elétrico</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">AltoQi Elétrico · Webapp técnico</p>
+      <h1>Ferramenta de Dimensionamento Elétrico</h1>
+      <p class="subtitle">Circuitos, demanda, corrente, condutores, queda de tensão, proteção, eletrodutos e relatórios.</p>
+    </div>
+    <div class="top-actions">
+      <button id="themeToggle" class="secondary">Tema</button>
+      <button id="exportJson" class="secondary">Exportar JSON</button>
+      <button id="exportCsv" class="secondary">Exportar CSV</button>
+      <button id="printReport">Imprimir</button>
+    </div>
+  </header>
+
+  <main class="app-shell">
+    <aside class="sidebar">
+      <h2>18 módulos</h2>
+      <nav id="moduleNav" class="module-nav"></nav>
+    </aside>
+
+    <section class="workspace">
+      <section class="panel hero-panel" id="overview">
+        <div>
+          <p class="eyebrow">Fluxo integrado</p>
+          <h2>Dimensionamento paramétrico completo</h2>
+          <p>Preencha os dados gerais, cadastre circuitos e processe o projeto. A ferramenta calcula corrente de projeto, corrente corrigida, seção mínima, queda de tensão, proteção, DR/DPS, eletroduto, demanda por quadro e inconsistências.</p>
+        </div>
+        <div class="status-grid" id="projectStatus"></div>
+      </section>
+
+      <section class="panel" id="module-configuracoes">
+        <div class="panel-title">
+          <div>
+            <p class="eyebrow">Módulo 1</p>
+            <h2>Configurações gerais do projeto</h2>
+          </div>
+          <button id="processProject">Processar projeto</button>
+        </div>
+        <div class="form-grid">
+          <label>Nome do projeto<input id="projectName" value="Projeto elétrico" /></label>
+          <label>Tensão F-N / fase-neutro (V)<input id="vfn" type="number" value="220" /></label>
+          <label>Tensão F-F / linha-linha (V)<input id="vll" type="number" value="380" /></label>
+          <label>Fator de potência padrão<input id="defaultPf" type="number" step="0.01" min="0.1" max="1" value="0.92" /></label>
+          <label>Queda máxima terminal (%)<input id="maxDropTerminal" type="number" step="0.1" value="4" /></label>
+          <label>Queda máxima alimentador (%)<input id="maxDropFeeder" type="number" step="0.1" value="2" /></label>
+          <label>Condutor<select id="material"><option value="cu">Cobre</option><option value="al">Alumínio</option></select></label>
+          <label>Isolação<select id="insulation"><option value="pvc">PVC 70 °C</option><option value="xlpe">XLPE/EPR 90 °C</option></select></label>
+          <label>Método padrão<select id="installMethod"><option value="B1">B1</option><option value="B2">B2</option><option value="C">C</option><option value="D">D</option></select></label>
+          <label>Temperatura ambiente (°C)<input id="ambientTemp" type="number" value="30" /></label>
+          <label>Fator de agrupamento<input id="groupFactor" type="number" min="0.1" max="1" step="0.01" value="1" /></label>
+          <label>Capacidade curto mínima (kA)<input id="minIcu" type="number" step="0.5" value="3" /></label>
+        </div>
+      </section>
+
+      <section class="panel" id="module-circuitos">
+        <div class="panel-title">
+          <div>
+            <p class="eyebrow">Módulos 2 a 7</p>
+            <h2>Cadastro e lançamento de circuitos</h2>
+          </div>
+          <button id="addCircuit">Adicionar circuito</button>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table" id="circuitsTable">
+            <thead>
+              <tr>
+                <th>#</th><th>Descrição</th><th>Tipo</th><th>Esquema</th><th>Potência W</th><th>Qtd</th><th>Dist. m</th><th>FP</th><th>Demanda</th><th>Fase</th><th>Ações</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel" id="module-resultados">
+        <div class="panel-title">
+          <div>
+            <p class="eyebrow">Módulos 8 a 15</p>
+            <h2>Resultados de dimensionamento</h2>
+          </div>
+          <div class="search-box"><input id="resultFilter" placeholder="Filtrar resultados..." /></div>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table" id="resultsTable">
+            <thead>
+              <tr>
+                <th>Circ.</th><th>Ib A</th><th>Icorr A</th><th>Cabo</th><th>Iz A</th><th>Disj.</th><th>ΔV %</th><th>Eletroduto</th><th>Status</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="grid-2">
+        <section class="panel" id="module-balanceamento">
+          <p class="eyebrow">Módulo 16</p>
+          <h2>Balanceamento e demanda</h2>
+          <div id="phaseBalance" class="cards"></div>
+        </section>
+        <section class="panel" id="module-alertas">
+          <p class="eyebrow">Módulo 17</p>
+          <h2>Erros e avisos</h2>
+          <div id="alerts" class="alerts"></div>
+        </section>
+      </section>
+
+      <section class="panel" id="module-relatorios">
+        <p class="eyebrow">Módulo 18</p>
+        <h2>Relatório técnico</h2>
+        <div id="report" class="report"></div>
+      </section>
+    </section>
+  </main>
+
+  <template id="circuitRowTemplate">
+    <tr>
+      <td><input data-field="id" class="tiny" /></td>
+      <td><input data-field="description" /></td>
+      <td><select data-field="loadType"></select></td>
+      <td><select data-field="scheme"></select></td>
+      <td><input data-field="power" type="number" /></td>
+      <td><input data-field="quantity" type="number" /></td>
+      <td><input data-field="length" type="number" /></td>
+      <td><input data-field="pf" type="number" step="0.01" /></td>
+      <td><input data-field="demandFactor" type="number" step="0.01" /></td>
+      <td><select data-field="phase"></select></td>
+      <td><button data-action="delete" class="danger">Excluir</button></td>
+    </tr>
+  </template>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
