@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Minha5410 - Dimensionamento Elétrico</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="hero">
+    <div>
+      <h1>Minha5410</h1>
+      <p>Web app de pré-dimensionamento elétrico em baixa tensão inspirada no fluxo de trabalho do AltoQi Elétrico.</p>
+    </div>
+    <div class="hero-badges">
+      <span>Cadastro</span>
+      <span>Circuitos</span>
+      <span>Condutores</span>
+      <span>Disjuntores</span>
+      <span>Relatório</span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="card">
+      <h2>1. Dados da instalação</h2>
+      <div class="grid">
+        <label>
+          Norma base
+          <input type="text" id="normaBase" value="ABNT NBR 5410 (referência parametrizada)" />
+        </label>
+        <label>
+          Sistema
+          <select id="sistema">
+            <option value="monofasico">Monofásico</option>
+            <option value="bifasico">Bifásico</option>
+            <option value="trifasico" selected>Trifásico</option>
+          </select>
+        </label>
+        <label>
+          Tensão fase-fase (V)
+          <input type="number" id="tensaoFF" value="220" min="1" step="1" />
+        </label>
+        <label>
+          Tensão fase-neutro (V)
+          <input type="number" id="tensaoFN" value="127" min="1" step="1" />
+        </label>
+        <label>
+          Material do condutor
+          <select id="material">
+            <option value="cobre" selected>Cobre</option>
+            <option value="aluminio">Alumínio</option>
+          </select>
+        </label>
+        <label>
+          Isolação
+          <select id="isolacao">
+            <option value="pvc" selected>PVC 70 °C</option>
+            <option value="xlpe">XLPE/EPR 90 °C</option>
+          </select>
+        </label>
+        <label>
+          Método de instalação
+          <select id="metodo">
+            <option value="B1" selected>B1 - eletroduto embutido</option>
+            <option value="B2">B2 - eletroduto aparente</option>
+            <option value="C">C - fixado diretamente</option>
+          </select>
+        </label>
+        <label>
+          Temperatura ambiente (°C)
+          <input type="number" id="temperatura" value="30" step="1" />
+        </label>
+        <label>
+          Fator de agrupamento
+          <input type="number" id="fatorAgrupamento" value="1" min="0.1" max="1" step="0.01" />
+        </label>
+        <label>
+          Queda de tensão máxima (%)
+          <input type="number" id="quedaMaxima" value="4" min="0.1" step="0.1" />
+        </label>
+        <label>
+          Fator de potência padrão
+          <input type="number" id="fpPadrao" value="0.92" min="0.1" max="1" step="0.01" />
+        </label>
+        <label>
+          Reserva de projeto (%)
+          <input type="number" id="reservaProjeto" value="10" min="0" step="1" />
+        </label>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="section-header">
+        <h2>2. Circuitos</h2>
+        <button id="adicionarCircuito">Adicionar circuito</button>
+      </div>
+      <div class="table-wrap">
+        <table id="tabelaCircuitos">
+          <thead>
+            <tr>
+              <th>Circuito</th>
+              <th>Tipo</th>
+              <th>Potência (W)</th>
+              <th>FP</th>
+              <th>Comprimento (m)</th>
+              <th>Fases</th>
+              <th>Demanda (%)</th>
+              <th>Observação</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="hint">Use percentuais de demanda para representar fatores de simultaneidade/cadastro conforme a aplicação.</p>
+    </section>
+
+    <section class="card">
+      <div class="section-header">
+        <h2>3. Critérios simplificados</h2>
+      </div>
+      <div class="grid">
+        <label>
+          Resistividade cobre (Ω·mm²/m)
+          <input type="number" id="rhoCobre" value="0.0175" step="0.0001" />
+        </label>
+        <label>
+          Resistividade alumínio (Ω·mm²/m)
+          <input type="number" id="rhoAluminio" value="0.0282" step="0.0001" />
+        </label>
+        <label>
+          Margem do disjuntor sobre Ib (%)
+          <input type="number" id="margemDisjuntor" value="15" step="1" />
+        </label>
+      </div>
+      <div class="note">
+        <strong>Atenção:</strong> esta aplicação foi construída como ferramenta de apoio. As tabelas internas são simplificadas e parametrizadas para estudo e pré-dimensionamento. A validação final deve ser conferida pelo projetista com a norma aplicável, dados do fabricante e requisitos da concessionária.
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="section-header">
+        <h2>4. Resultados</h2>
+        <div class="actions">
+          <button id="calcular">Calcular</button>
+          <button id="carregarExemplo" class="secondary">Carregar exemplo</button>
+          <button id="exportarJson" class="secondary">Exportar JSON</button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table id="tabelaResultados">
+          <thead>
+            <tr>
+              <th>Circuito</th>
+              <th>Pot. demandada (W)</th>
+              <th>Ib (A)</th>
+              <th>Iz corrigida requerida (A)</th>
+              <th>Seção sugerida (mm²)</th>
+              <th>Disjuntor sugerido (A)</th>
+              <th>ΔV (%)</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="summary-grid">
+        <div class="summary">
+          <span>Total instalado</span>
+          <strong id="totalInstalado">0 W</strong>
+        </div>
+        <div class="summary">
+          <span>Total demandado</span>
+          <strong id="totalDemandado">0 W</strong>
+        </div>
+        <div class="summary">
+          <span>Maior disjuntor</span>
+          <strong id="maiorDisjuntor">0 A</strong>
+        </div>
+        <div class="summary">
+          <span>Maior seção</span>
+          <strong id="maiorSecao">0 mm²</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>5. Relatório técnico</h2>
+      <textarea id="relatorio" rows="18" readonly></textarea>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>Minha5410 · Protótipo estático para apoio ao dimensionamento elétrico em baixa tensão.</p>
+  </footer>
+
+  <template id="linhaCircuitoTemplate">
+    <tr>
+      <td><input type="text" class="circuito" placeholder="C1" /></td>
+      <td>
+        <select class="tipo">
+          <option value="iluminacao">Iluminação</option>
+          <option value="tomadas" selected>Tomadas</option>
+          <option value="motor">Motor</option>
+          <option value="ar-condicionado">Ar-condicionado</option>
+          <option value="chuveiro">Chuveiro</option>
+          <option value="custom">Customizado</option>
+        </select>
+      </td>
+      <td><input type="number" class="potencia" value="1200" min="0" step="1" /></td>
+      <td><input type="number" class="fp" value="0.92" min="0.1" max="1" step="0.01" /></td>
+      <td><input type="number" class="comprimento" value="25" min="0" step="0.1" /></td>
+      <td>
+        <select class="fases">
+          <option value="1" selected>1F</option>
+          <option value="2">2F</option>
+          <option value="3">3F</option>
+        </select>
+      </td>
+      <td><input type="number" class="demanda" value="100" min="1" max="100" step="1" /></td>
+      <td><input type="text" class="observacao" placeholder="Uso geral" /></td>
+      <td><button class="remover danger">×</button></td>
+    </tr>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>
